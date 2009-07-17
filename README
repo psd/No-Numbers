@@ -1,0 +1,1 @@
+Decodes a WAV file into a sequence of 8 ascii characters, sent to a serial port for an art exhibit.
