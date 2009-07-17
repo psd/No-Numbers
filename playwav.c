@@ -122,6 +122,7 @@ extern char *optarg;
 static int open_tty(const char *tty)
 {
 int fd;
+struct termios termios;
 
 	if (0 > (fd = open(tty, O_RDWR|O_NONBLOCK))) {
 		fprintf(stderr, "failed to open %s: %s", tty, strerror(errno));
@@ -134,6 +135,19 @@ int fd;
 
 	if (stty) {
 		fprintf(stderr, "asserting stty settings ..\n");
+		if (tcgetattr(fd, &termios)) {
+			fprintf(stderr, "tcgetattr failed %s: %s", tty, strerror(errno));
+			return FAIL;
+		}
+		cfmakeraw(&termios);
+		if (cfsetospeed(&termios, B9600)) {
+			fprintf(stderr, "cfsetospeed failed %s: %s", tty, strerror(errno));
+			return FAIL;
+		}
+		if (tcsetattr(fd, TCSANOW, &termios)) {
+			fprintf(stderr, "tcsetattr failed %s: %s", tty, strerror(errno));
+			return FAIL;
+		}
 	}
 
 	return fd;
