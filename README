@@ -1,1 +1,23 @@
 Decodes a WAV file into a sequence of 8 ascii characters, sent to a serial port for an art exhibit.
+
+Installation:
+
+    $ make
+
+Test Cycle Mode:
+
+    $ playwav -t
+
+    $ playwav -i 1000000 -l /dev/ttys0 -r /dev/ttys1 -t
+
+Running:
+
+    $ playwav -i 1000000 -l /dev/ttys0 -r /dev/ttys1 -f MrNo.wav
+
+Command usage:
+
+    $ playwav -?
+
+Source code: 
+
+    http://github.com/psd/MrNo/tree/master
