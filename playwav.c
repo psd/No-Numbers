@@ -27,27 +27,24 @@
 #include <libgen.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <termios.h>
 
-#ifndef OK
-#define OK 0
-#endif
-
-#ifndef FAIL
-#define FAIL -1
-#endif
+#include "base.h"
+#include "wav.h"
+#include "tty.h"
 
 
 /* 
  *  options
  */
-static const char *left_tty = "/dev/ttyu0";
-static const char *right_tty = "/dev/ttyu1";
+static const char *left_tty = "/dev/ttys000";
+static const char *right_tty = "/dev/ttys001";
 static const char *filename = "in.wav";
+
 static useconds_t interval = 1000000L;
-static int verbose = 1;
+
 static int test = 0;
 static int stty = 1;
+int verbose = 1;
 
 
 /* 
@@ -78,7 +75,7 @@ static int getoptions(int argc, char *argv[])
 int c;
 extern char *optarg;
 
-	while ((c = getopt(argc, argv, "tsnhl:r:f:i:")) != -1) {
+	while ((c = getopt(argc, argv, "tsnh?l:r:f:i:")) != -1) {
 		switch(c) {
 		case 't':
 			test = 1;
@@ -116,87 +113,34 @@ extern char *optarg;
 	return OK;
 }
 
-/*
- *  open a tty, assert settings
- */
-static int open_tty(const char *tty)
-{
-int fd;
-struct termios termios;
-
-	if (0 > (fd = open(tty, O_RDWR|O_NONBLOCK))) {
-		fprintf(stderr, "failed to open %s: %s", tty, strerror(errno));
-		return fd;
-	}
-
-	if (verbose) {
-		fprintf(stderr, "opened tty %s as %d\n", tty, fd);
-	}
-
-	if (stty) {
-		fprintf(stderr, "asserting stty settings ..\n");
-		if (tcgetattr(fd, &termios)) {
-			fprintf(stderr, "tcgetattr failed %s: %s", tty, strerror(errno));
-			return FAIL;
-		}
-		cfmakeraw(&termios);
-		if (cfsetospeed(&termios, B9600)) {
-			fprintf(stderr, "cfsetospeed failed %s: %s", tty, strerror(errno));
-			return FAIL;
-		}
-		if (tcsetattr(fd, TCSANOW, &termios)) {
-			fprintf(stderr, "tcsetattr failed %s: %s", tty, strerror(errno));
-			return FAIL;
-		}
-	}
-
-	return fd;
-}
-
-static void *open_wav(const char *filename)
-{
-FILE *fp;
-
-	if (NULL == (fp = fopen(filename, "r"))) {
-		fprintf(stderr, "failed to open %s: %s", filename, strerror(errno));
-		return NULL;
-	}
-
-	if (verbose)
-		fprintf(stderr, "opened wav %s as %p\n", filename, fp);
-
-	return fp;
-}
 
 static int main_path()
 {
-void *wav;
-int left;
-int right;
-long sample;
-char buff[16];
+wav_t wav;
+tty_t tty_left;
+tty_t tty_right;
+char buff_left[16];
+char buff_right[16];
 
-	srand(time(NULL));
-
-	if (0 > (left = open_tty(left_tty))
-		|| 0 > (right = open_tty(right_tty)))
+	if (NULL == (wav = wav_open(filename, test)))
 		return FAIL;
 
-	if (!test) {
-		if (NULL == (wav = open_wav(filename)))
-			return FAIL;
-	}
+	if (NULL == (tty_left = tty_open(left_tty, stty)))
+		return FAIL;
+
+	if (NULL == (tty_right = tty_open(right_tty, stty)))
+		return FAIL;
 
 	for (;;) {
-		sample = labs(((long)rand() * (long)rand()) % 100000000L);
+		
+		if (wav_next(wav, buff_left, buff_right, 8))
+			return FAIL;
 
-		sprintf(buff, "%8.8ld", sample);
+		if (tty_write(tty_left, buff_left, 8))
+			return FAIL;
 
-		write(left, buff, 8);
-		write(right, buff, 8);
-		write(1, buff, 8);
-
-		//puts(buff);
+		if (tty_write(tty_right, buff_right, 8))
+			return FAIL;
 
 		usleep(interval);
 	}
@@ -208,6 +152,8 @@ int main(int argc, char *argv[], char **envp)
 {
 	if (getoptions(argc, argv))
 		exit(1);
+
+	srand(time(NULL));
 	
 	if (main_path()) 
 		exit(2);
