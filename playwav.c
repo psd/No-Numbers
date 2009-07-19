@@ -41,6 +41,7 @@ static const char *right_tty = "/dev/ttys001";
 static const char *filename = "in.wav";
 
 static useconds_t interval = 1000000L;
+static useconds_t delay = 10000L;
 
 static int test = 0;
 static int stty = 1;
@@ -62,7 +63,8 @@ static void usage(const char *command)
 	fprintf(stderr, "   -f filename     wav file to decode - %s\n", filename);
 	fprintf(stderr, "   -l left_tty     pathname for left-channel output - %s\n", left_tty);
 	fprintf(stderr, "   -r right_tty    pathname for right-channel output - %s\n", right_tty);
-	fprintf(stderr, "   -i useconds     interval between outputting numbers in useconds\n");
+	fprintf(stderr, "   -i useconds     interval between outputting a sample in useconds\n");
+	fprintf(stderr, "   -d useconds     interval between outputting each character in useconds\n");
 	return;
 }
 
@@ -75,7 +77,7 @@ static int getoptions(int argc, char *argv[])
 int c;
 extern char *optarg;
 
-	while ((c = getopt(argc, argv, "tsnh?l:r:f:i:")) != -1) {
+	while ((c = getopt(argc, argv, "tsnh?l:r:f:i:d:")) != -1) {
 		switch(c) {
 		case 't':
 			test = 1;
@@ -97,6 +99,9 @@ extern char *optarg;
 			break;
 		case 'i':
 			interval = strtoll(optarg, NULL, 10);
+			break;
+		case 'd':
+			delay = strtoll(optarg, NULL, 10);
 			break;
 		case '?':
 		case 'h':
@@ -126,10 +131,10 @@ int countdown = 10;
 	if (NULL == (wav = wav_open(filename, test)))
 		return FAIL;
 
-	if (NULL == (tty_left = tty_open(left_tty, stty)))
+	if (NULL == (tty_left = tty_open(left_tty, stty, delay)))
 		return FAIL;
 
-	if (NULL == (tty_right = tty_open(right_tty, stty)))
+	if (NULL == (tty_right = tty_open(right_tty, stty, delay)))
 		return FAIL;
 
 	for (;;) {

@@ -35,6 +35,7 @@ struct tty_t
 {
 	char *filename;
 	int fd;
+	useconds_t delay;
 };
 
 /*
@@ -77,7 +78,7 @@ struct termios termios;
 /*
  *  open a tty, assert settings
  */
-tty_t tty_open(const char *ttyname, int stty)
+tty_t tty_open(const char *ttyname, int stty, useconds_t delay)
 {
 struct tty_t *tty;
 int fd;
@@ -101,6 +102,7 @@ int fd;
 
 	tty->fd = fd;
 	tty->filename = strdup(ttyname);
+	tty->delay = delay;
 
 	return tty;
 }
@@ -112,10 +114,21 @@ int fd;
 int tty_write(tty_t p, const char *buff, int len)
 {
 struct tty_t *tty = p;
+int i;
 
-	if (len != write(tty->fd, buff, len)) {
-		fprintf(stderr, "write failed %s: %s", tty->filename, strerror(errno));
-		return FAIL;
+	if (tty->delay) {
+		for (i = 0; i < len; i++) {
+			if (1 != write(tty->fd, buff+i, 1)) {
+				fprintf(stderr, "write failed %s: %s", tty->filename, strerror(errno));
+				return FAIL;
+			}
+			usleep(tty->delay);
+		}
+	} else {
+		if (len != write(tty->fd, buff, len)) {
+			fprintf(stderr, "write failed %s: %s", tty->filename, strerror(errno));
+			return FAIL;
+		}
 	}
 	
 	if (verbose)
