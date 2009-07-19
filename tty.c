@@ -126,7 +126,7 @@ int i;
 				return FAIL;
 			}
 			if (verbose)
-				write(2, buff+1, 1);
+				write(2, buff+i, 1);
 			usleep(tty->delay);
 		}
 	} else {
