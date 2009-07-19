@@ -9,6 +9,10 @@
 #define FAIL -1
 #endif
 
+#ifndef DONE
+#define DONE 1
+#endif
+
 extern int verbose;
 
 #endif

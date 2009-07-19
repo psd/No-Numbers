@@ -114,13 +114,14 @@ extern char *optarg;
 }
 
 
-static int main_path()
+static int playwav()
 {
 wav_t wav;
 tty_t tty_left;
 tty_t tty_right;
 char buff_left[16];
 char buff_right[16];
+int countdown = 10;
 
 	if (NULL == (wav = wav_open(filename, test)))
 		return FAIL;
@@ -132,9 +133,23 @@ char buff_right[16];
 		return FAIL;
 
 	for (;;) {
-		
-		if (wav_next(wav, buff_left, buff_right, 8))
-			return FAIL;
+
+		if (countdown) {
+			countdown--;
+			memset(buff_left, '0'+countdown, 8);
+			memset(buff_right, '0'+countdown, 8);
+		}
+		else {
+			switch (wav_next(wav, buff_left, buff_right, 8)) {
+			case OK:
+				break;
+			case FAIL:
+				return FAIL;
+			default:
+				countdown = 10;
+				continue;
+			}
+		}
 
 		if (tty_write(tty_left, buff_left, 8))
 			return FAIL;
@@ -155,7 +170,7 @@ int main(int argc, char *argv[], char **envp)
 
 	srand(time(NULL));
 	
-	if (main_path()) 
+	if (playwav()) 
 		exit(2);
 
 	exit(0);

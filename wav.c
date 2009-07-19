@@ -37,6 +37,7 @@ struct wav_t
 	char *filename;
 	FILE *fp;
 	size_t head_len;
+	int test;
 };
 
 
@@ -117,6 +118,7 @@ FILE *fp;
 
 	wav->fp = fp;
 	wav->filename = strdup(filename);
+	wav->test = test;
 
 	if (wav_read_riff(wav)) {
 		return NULL;
@@ -171,9 +173,12 @@ Data (Samples)
  */
 int wav_next(wav_t p, char *buff_left, char *buff_right, size_t len)
 {
-//struct wav_t *wav = p;
+struct wav_t *wav = p;
 long sample;
 
+	if (wav->test) {
+		return DONE;
+	}
 	sample = labs(((long)rand() * (long)rand()) % 100000000L);
 
 	sprintf(buff_left, "%8.8ld\n", sample);
