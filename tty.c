@@ -33,7 +33,7 @@
 
 struct tty_t
 {
-	char *name;
+	char *filename;
 	int fd;
 };
 
@@ -54,12 +54,18 @@ struct termios termios;
 
 	cfmakeraw(&termios);
 
+	/*
+	 *  assert 8 bits, no parity, one stop bit
+	 */
+	termios.c_cflag &= ~(CSIZE | PARENB);
+	termios.c_cflag |= (CS8 | CSTOPB);
+
 	if (cfsetospeed(&termios, B9600)) {
 		fprintf(stderr, "cfsetospeed failed %s: %s", ttyname, strerror(errno));
 		return FAIL;
 	}
 
-	if (tcsetattr(fd, TCSANOW, &termios)) {
+	if (tcsetattr(fd, TCSAFLUSH, &termios)) {
 		fprintf(stderr, "tcsetattr failed %s: %s", ttyname, strerror(errno));
 		return FAIL;
 	}
@@ -94,7 +100,7 @@ int fd;
 	}
 
 	tty->fd = fd;
-	tty->name = strdup(ttyname);
+	tty->filename = strdup(ttyname);
 
 	return tty;
 }
@@ -108,12 +114,12 @@ int tty_write(tty_t p, const char *buff, int len)
 struct tty_t *tty = p;
 
 	if (len != write(tty->fd, buff, len)) {
-		fprintf(stderr, "write failed %s: %s", tty->name, strerror(errno));
+		fprintf(stderr, "write failed %s: %s", tty->filename, strerror(errno));
 		return FAIL;
 	}
 	
 	if (verbose)
-		fprintf(stderr, "%s: %*.*s\n", tty->name, len, len, buff);
+		fprintf(stderr, "%s: %*.*s\n", tty->filename, len, len, buff);
 
 	return OK;
 }

@@ -32,12 +32,71 @@
 #include "base.h"
 #include "wav.h"
 
+struct wav_t
+{
+	char *filename;
+	FILE *fp;
+	size_t head_len;
+};
+
+
+static unsigned long wav_decode_ulong(void *buff, int offset, int len)
+{
+unsigned char *p = buff;
+unsigned long n = 0L;
+
+	p += offset;
+	while (len > 0) {
+		n <<= 8;
+		n += p[len];
+		len--;
+	}
+	return n;
+}
+
+
+/*
+ *
+	0000000      4952    4646    9be4    0007    4157    4556    6d66
+           R   I   F   F 344 233  \a  \0   W   A   V   E  
+
+	0 - 3 "RIFF" (ASCII)
+	4 - 7 length of following package (little endian)
+	8 - 11 "WAVE" (ASCII)
+
+ *
+ */
+static int wav_read_riff(struct wav_t *wav)
+{
+char buff[16];
+
+	if (1 != fread(buff, 12, 1, wav->fp)) {
+		fprintf(stderr, "failed to read WAV RIFF header %s", wav->filename);
+		return FAIL;
+	}
+
+	if (strncmp(buff, "RIFF", 4)) {
+		fprintf(stderr, "RIFF string missing from WAV header %s", wav->filename);
+		return FAIL;
+	}
+
+	if (strncmp(buff+8, "WAVE", 4)) {
+		fprintf(stderr, "WAVE string missing from WAV header %s", wav->filename);
+		return FAIL;
+	}
+
+	wav->head_len = wav_decode_ulong(buff, 4, 4);
+
+	return OK;
+}
+
 
 /*
  *  open a wav file
  */
 wav_t wav_open(const char *filename, int test)
 {
+struct wav_t *wav;
 FILE *fp;
 
 	if (test)
@@ -50,18 +109,32 @@ FILE *fp;
 		fprintf(stderr, "failed to open %s: %s", filename, strerror(errno));
 		return NULL;
 	}
+	
+	if (NULL == (wav = malloc(sizeof(struct wav_t)))) {
+		fprintf(stderr, "malloc wav failed: %s", strerror(errno));
+		return NULL;
+	}
 
-	return fp;
+	wav->fp = fp;
+	wav->filename = strdup(filename);
+
+	if (wav_read_riff(wav)) {
+		return NULL;
+	}
+
+	return wav;
 }
 
+
 /*
-Byte Number
-0 - 3
-"RIFF" (ASCII Characters)
-4 - 7
-Total Length Of Package To Follow (Binary, little endian)
-8 - 11
-"WAVE" (ASCII Characters)
+0000000      4952    4646    9be4    0007    4157    4556    6d66    2074
+           R   I   F   F 344 233  \a  \0   W   A   V   E   f   m   t    
+0000020      0010    0000    0001    0002    ac44    0000    b110    0002
+         020  \0  \0  \0 001  \0 002  \0   D 254  \0  \0 020 261 002  \0
+0000040      0004    0010    6164    6174    9bc0    0007    0000    0000
+         004  \0 020  \0   d   a   t   a 300 233  \a  \0  \0  \0  \0  \0
+0000060      0000    0000    0000    0000    0000    0000    0000    0000
+          \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0
 
 FORMAT Chunk (24 bytes in length total)
 Byte Number
@@ -96,8 +169,9 @@ Data (Samples)
 /*
  *  cycle through samples
  */
-int wav_next(wav_t wav, char *buff_left, char *buff_right, size_t len)
+int wav_next(wav_t p, char *buff_left, char *buff_right, size_t len)
 {
+//struct wav_t *wav = p;
 long sample;
 
 	sample = labs(((long)rand() * (long)rand()) % 100000000L);

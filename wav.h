@@ -6,14 +6,6 @@
  */
 typedef void *wav_t;
 
-typedef struct wav_riff_chunk
-{
-	char riff[5];
-	long packlen;
-	char wave[5];
-}
-wav_riff_chunk_t;
-
 /*
  *  open wav file
  */
