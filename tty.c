@@ -116,12 +116,17 @@ int tty_write(tty_t p, const char *buff, int len)
 struct tty_t *tty = p;
 int i;
 
+	if (verbose)
+		fprintf(stderr, "%s: ", tty->filename);
+
 	if (tty->delay) {
 		for (i = 0; i < len; i++) {
 			if (1 != write(tty->fd, buff+i, 1)) {
 				fprintf(stderr, "write failed %s: %s", tty->filename, strerror(errno));
 				return FAIL;
 			}
+			if (verbose)
+				write(2, buff+1, 1);
 			usleep(tty->delay);
 		}
 	} else {
@@ -129,10 +134,12 @@ int i;
 			fprintf(stderr, "write failed %s: %s", tty->filename, strerror(errno));
 			return FAIL;
 		}
-	}
 	
+		if (verbose)
+			write(2, buff, len);
+	}
 	if (verbose)
-		fprintf(stderr, "%s: %*.*s\n", tty->filename, len, len, buff);
+		write(2, "\n", 1);
 
 	return OK;
 }
