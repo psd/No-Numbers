@@ -40,8 +40,8 @@ static const char *left_tty = "/dev/ttys000";
 static const char *right_tty = "/dev/ttys001";
 static const char *filename = "in.wav";
 
-static useconds_t interval = 1000000L;
-static useconds_t delay = 10000L;
+static useconds_t interval = 1000000LL;
+static useconds_t delay = 0LL;
 
 static int test = 0;
 static int stty = 1;

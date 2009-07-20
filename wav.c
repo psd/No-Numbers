@@ -98,19 +98,18 @@ char buff[16];
 wav_t wav_open(const char *filename, int test)
 {
 struct wav_t *wav;
-FILE *fp;
+FILE *fp = NULL;
 
-	if (test)
-		return stdin;
+	if (!test) {
+		if (verbose)
+			fprintf(stderr, "opening wav %s\n", filename);
 
-	if (verbose)
-		fprintf(stderr, "opening wav %s\n", filename);
-
-	if (NULL == (fp = fopen(filename, "r"))) {
-		fprintf(stderr, "failed to open %s: %s", filename, strerror(errno));
-		return NULL;
+		if (NULL == (fp = fopen(filename, "r"))) {
+			fprintf(stderr, "failed to open %s: %s", filename, strerror(errno));
+			return NULL;
+		}
 	}
-	
+		
 	if (NULL == (wav = malloc(sizeof(struct wav_t)))) {
 		fprintf(stderr, "malloc wav failed: %s", strerror(errno));
 		return NULL;
