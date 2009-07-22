@@ -42,7 +42,9 @@ static const char *filename = "in.wav";
 
 static useconds_t interval = 1000000LL;
 static useconds_t delay = 0LL;
+static long long maximum = 0LL;
 
+static int countdown = 10;
 static int test = 0;
 static int stty = 1;
 int verbose = 1;
@@ -63,8 +65,10 @@ static void usage(const char *command)
 	fprintf(stderr, "   -f filename     wav file to decode - %s\n", filename);
 	fprintf(stderr, "   -l left_tty     pathname for left-channel output - %s\n", left_tty);
 	fprintf(stderr, "   -r right_tty    pathname for right-channel output - %s\n", right_tty);
+	fprintf(stderr, "   -c countdown    countdown start value - 10 for maximum,  0 for no countdown\n");
 	fprintf(stderr, "   -i useconds     interval between outputting a sample in useconds\n");
 	fprintf(stderr, "   -d useconds     interval between outputting each character in useconds\n");
+	fprintf(stderr, "   -m maximum      maximum number of samples to output\n");
 	return;
 }
 
@@ -77,7 +81,7 @@ static int getoptions(int argc, char *argv[])
 int c;
 extern char *optarg;
 
-	while ((c = getopt(argc, argv, "tsnh?l:r:f:i:d:")) != -1) {
+	while ((c = getopt(argc, argv, "tsnh?l:r:f:c:i:d:m:")) != -1) {
 		switch(c) {
 		case 't':
 			test = 1;
@@ -97,11 +101,19 @@ extern char *optarg;
 		case 'f':
 			filename = optarg;
 			break;
+		case 'c':
+			countdown = (int)strtol(optarg, NULL, 10);
+			if (countdown > 10) 
+				countdown = 10;
+			break;
 		case 'i':
 			interval = strtoll(optarg, NULL, 10);
 			break;
 		case 'd':
 			delay = strtoll(optarg, NULL, 10);
+			break;
+		case 'm':
+			maximum = strtoll(optarg, NULL, 10);
 			break;
 		case '?':
 		case 'h':
@@ -126,7 +138,8 @@ tty_t tty_left;
 tty_t tty_right;
 char buff_left[16];
 char buff_right[16];
-int countdown = 10;
+int counter = countdown;
+long long times = 0;
 
 	if (NULL == (wav = wav_open(filename, test)))
 		return FAIL;
@@ -139,10 +152,10 @@ int countdown = 10;
 
 	for (;;) {
 
-		if (countdown) {
-			countdown--;
-			memset(buff_left, '0'+countdown, 8);
-			memset(buff_right, '0'+countdown, 8);
+		if (counter) {
+			counter--;
+			memset(buff_left, '0'+counter, 8);
+			memset(buff_right, '0'+counter, 8);
 		}
 		else {
 			switch (wav_next(wav, buff_left, buff_right, 8)) {
@@ -151,7 +164,7 @@ int countdown = 10;
 			case FAIL:
 				return FAIL;
 			default:
-				countdown = 10;
+				counter = countdown;
 				continue;
 			}
 		}
@@ -163,6 +176,12 @@ int countdown = 10;
 			return FAIL;
 
 		usleep(interval);
+
+		times++;
+		if (maximum > 0 && times >= maximum) {
+			fprintf(stderr, "stopping after %lld samples\n", times);
+			break;
+		}
 	}
 
 	return OK;

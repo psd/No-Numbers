@@ -21,4 +21,18 @@
 # 
 # 
 
+[ ! -d out ]&&mkdir out
+function expect()
+{
+	echo "$1: \c"
+	eval $2 > out/$1.stdout 2> out/$1.stderr
+	if cmp tests/$1.stderr out/$1.stderr > out/$1.cmp
+	then
+		echo "[PASS]"
+	else
+		diff tests/$1.stderr out/$1.stderr >> out/$1.cmp
+		echo "[FAIL]"
+	fi
+}
 
+expect usage 'playwav -h' 
