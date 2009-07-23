@@ -42,7 +42,8 @@ static const char *filename = "in.wav";
 
 static useconds_t interval = 1000000LL;
 static useconds_t delay = 0LL;
-static long long maximum = 0LL;
+static long long max_samples = 0LL;
+static long long max_loops = 0LL;
 
 static int countdown = 10;
 static int test = 0;
@@ -69,6 +70,7 @@ static void usage(const char *command)
 	fprintf(stderr, "   -i useconds     interval between outputting a sample in useconds\n");
 	fprintf(stderr, "   -d useconds     interval between outputting each character in useconds\n");
 	fprintf(stderr, "   -m maximum      maximum number of samples to output\n");
+	fprintf(stderr, "   -x maximum      stop after maxiumum loops - 0 loop forever\n");
 	return;
 }
 
@@ -81,7 +83,7 @@ static int getoptions(int argc, char *argv[])
 int c;
 extern char *optarg;
 
-	while ((c = getopt(argc, argv, "tsnh?l:r:f:c:i:d:m:")) != -1) {
+	while ((c = getopt(argc, argv, "tsnh?l:r:f:c:i:d:m:x:")) != -1) {
 		switch(c) {
 		case 't':
 			test = 1;
@@ -113,7 +115,10 @@ extern char *optarg;
 			delay = strtoll(optarg, NULL, 10);
 			break;
 		case 'm':
-			maximum = strtoll(optarg, NULL, 10);
+			max_samples = strtoll(optarg, NULL, 10);
+			break;
+		case 'x':
+			max_loops = strtoll(optarg, NULL, 10);
 			break;
 		case '?':
 		case 'h':
@@ -133,16 +138,14 @@ extern char *optarg;
 
 static int playwav()
 {
-wav_t wav;
+wav_t wav = NULL;
 tty_t tty_left;
 tty_t tty_right;
 char buff_left[16];
 char buff_right[16];
 int counter = countdown;
 long long times = 0;
-
-	if (NULL == (wav = wav_open(filename, test)))
-		return FAIL;
+long long loops = 0;
 
 	if (NULL == (tty_left = tty_open(left_tty, stty, delay)))
 		return FAIL;
@@ -158,14 +161,27 @@ long long times = 0;
 			memset(buff_right, '0'+counter, 8);
 		}
 		else {
+			if (NULL == wav)
+				if (NULL == (wav = wav_open(filename, test)))
+					return FAIL;
+
 			switch (wav_next(wav, buff_left, buff_right, 8)) {
 			case OK:
 				break;
-			case FAIL:
-				return FAIL;
-			default:
+			case DONE:
+				if (wav_close(wav))
+					return FAIL;
+				wav = NULL;
+				loops++;
+				if (max_loops > 0L && loops >= max_loops) {
+					fprintf(stderr, "stopping after %lld loops\n", loops);
+					return OK;
+				}
 				counter = countdown;
 				continue;
+			case FAIL:
+			default:
+				return FAIL;
 			}
 		}
 
@@ -178,9 +194,9 @@ long long times = 0;
 		usleep(interval);
 
 		times++;
-		if (maximum > 0 && times >= maximum) {
+		if (max_samples > 0LL && times >= max_loops) {
 			fprintf(stderr, "stopping after %lld samples\n", times);
-			break;
+			return OK;
 		}
 	}
 

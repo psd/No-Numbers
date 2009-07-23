@@ -43,6 +43,7 @@ struct wav_t
 	unsigned long bytes_per_sample;
 	unsigned long bits_per_sample;
 	size_t chunk_len;
+	size_t chunk_pos;
 	void *chunk;
 };
 
@@ -110,8 +111,6 @@ char buff[16];
 		020  \0  \0  \0 001  \0 002  \0   D 254  \0  \0 020 261 002  \0
 	0000040      0004    0010    6164    6174    9bc0    0007    0000    0000
 		004  \0 020  \0   d   a   t   a 300 233  \a  \0  \0  \0  \0  \0
-	0000060      0000    0000    0000    0000    0000    0000    0000    0000
-		\0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0
 
 	FORMAT Chunk (24 bytes in length total)
 	0 - 3 "fmt_" (ASCII Characters)
@@ -151,13 +150,18 @@ unsigned long n;
 	wav->sample_rate = wav_decode_ulong("format sample rate", buff, 12, 4);
 	wav->bytes_per_second = wav_decode_ulong("format bytes per second", buff, 16, 4);
 	wav->bytes_per_sample = wav_decode_ulong("format bytes per sample", buff, 20, 2);
-	wav->bits_per_sample = wav_decode_ulong("format sample rate", buff, 22, 4);
+	wav->bits_per_sample = wav_decode_ulong("format bits per sample", buff, 22, 2);
 
 	return OK;
 }
 
 
 /*
+	0000040      0004    0010    6164    6174    9bc0    0007    0000    0000
+		004  \0 020  \0   d   a   t   a 300 233  \a  \0  \0  \0  \0  \0
+	0000060      0000    0000    0000    0000    0000    0000    0000    0000
+		\0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0
+
 	DATA Chunk
 	0 - 3 "data" (ASCII Characters)
 	4 - 7 Length Of Data To Follow
@@ -167,10 +171,16 @@ static int wav_read_chunk(struct wav_t *wav)
 {
 char buff[16];
 
-	fprintf(stderr, "chunk\n");
+	if (verbose)
+		fprintf(stderr, "reading a chunk ..\n");
 
 	if (1 != fread(buff, 8, 1, wav->fp)) {
-		fprintf(stderr, "failed to read WAV data chunk %s", wav->filename);
+		if (feof(wav->fp)) {
+			if (verbose)
+				fprintf(stderr, "end of file\n");
+			return DONE;
+		}
+		fprintf(stderr, "failed to read WAV data chunk header %s", wav->filename);
 		return FAIL;
 	}
 
@@ -189,33 +199,58 @@ char buff[16];
 		return FAIL;
 	}
 
+	if (1 != fread(wav->chunk, wav->chunk_len, 1, wav->fp)) {
+		fprintf(stderr, "failed to read WAV data chunk %s", wav->filename);
+		return FAIL;
+	}
+
+	wav->chunk_pos = 0;
+
 	return OK;
 }
 
 
 /*
  *  cycle through samples
+ *  - returns DONE when at end of file
  */
 int wav_next(wav_t p, char *buff_left, char *buff_right, size_t len)
 {
+int status;
 struct wav_t *wav = p;
-long sample;
+unsigned long sample_left;
+unsigned long sample_right;
 
 	if (wav->test) {
 		return DONE;
 	}
 
-	wav_read_chunk(p);
+	/*
+	 *  move through file
+	 */
+	if (0 == wav->chunk_pos) {
+		if (OK != (status = wav_read_chunk(wav)))
+			return status;
+	}
 
-	sample = labs(((long)rand() * (long)rand()) % 100000000L);
+	sample_left = wav_decode_ulong("sample left", wav->chunk, wav->chunk_pos, 2);
+	sample_right = wav_decode_ulong("sample right", wav->chunk, wav->chunk_pos + 2, 2);
+	wav->chunk_pos += 4;
 
-	sprintf(buff_left, "%8.8ld\n", sample);
-	sprintf(buff_right, "%8.8ld\n", sample);
+	if (wav->chunk_pos > wav->chunk_len) {
+		wav->chunk_pos = 0L;
+		fprintf(stderr, "end of chunk\n");
+	}
 
+	sprintf(buff_left, "%8.8ld\n", sample_left);
+	sprintf(buff_right, "%8.8ld\n", sample_right);
 	return OK;
 }
 
 
+/*
+ *  open a WAV file
+ */
 static int wav_open_file(struct wav_t *wav)
 {
 	if (verbose)
@@ -260,4 +295,16 @@ struct wav_t *wav;
 		return NULL;
 
 	return wav;
+}
+
+
+/*
+ *  close a wav file
+ */
+int wav_close(wav_t wav)
+{
+	if (verbose) 
+		fprintf(stderr, "closing wav\n");
+
+	return OK;
 }
