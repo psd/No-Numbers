@@ -84,17 +84,17 @@ static int wav_read_riff(struct wav_t *wav)
 char buff[16];
 
 	if (1 != fread(buff, 12, 1, wav->fp)) {
-		fprintf(stderr, "failed to read WAV RIFF header %s", wav->filename);
+		fprintf(stderr, "failed to read WAV RIFF header %s\n", wav->filename);
 		return FAIL;
 	}
 
 	if (strncmp(buff, "RIFF", 4)) {
-		fprintf(stderr, "RIFF string missing from WAV header %s", wav->filename);
+		fprintf(stderr, "RIFF string missing from WAV header %s\n", wav->filename);
 		return FAIL;
 	}
 
 	if (strncmp(buff+8, "WAVE", 4)) {
-		fprintf(stderr, "WAVE string missing from WAV header %s", wav->filename);
+		fprintf(stderr, "WAVE string missing from WAV header %s\n", wav->filename);
 		return FAIL;
 	}
 
@@ -128,22 +128,22 @@ char buff[32];
 unsigned long n;
 
 	if (1 != fread(buff, 24, 1, wav->fp)) {
-		fprintf(stderr, "failed to read WAV format header %s", wav->filename);
+		fprintf(stderr, "failed to read WAV format header %s\n", wav->filename);
 		return FAIL;
 	}
 
 	if (strncmp(buff, "fmt ", 4)) {
-		fprintf(stderr, "fmt string missing from WAV header %s", wav->filename);
+		fprintf(stderr, "fmt string missing from WAV header %s\n", wav->filename);
 		return FAIL;
 	}
 
 	if (0x01 != (n = wav_decode_ulong("format length", buff, 8, 2))) {
-		fprintf(stderr, "format length unexpected length: %lx", n);
+		fprintf(stderr, "format length unexpected length: %lx\n", n);
 		return FAIL;
 	}
 
 	if (0x02 != (n = wav_decode_ulong("format channels", buff, 10, 2))) {
-		fprintf(stderr, "format unexpected number of channels: %lx", n);
+		fprintf(stderr, "format unexpected number of channels: %lx\n", n);
 		return FAIL;
 	}
 
@@ -180,12 +180,12 @@ char buff[16];
 				fprintf(stderr, "end of file\n");
 			return DONE;
 		}
-		fprintf(stderr, "failed to read WAV data chunk header %s", wav->filename);
+		fprintf(stderr, "failed to read WAV data chunk header %s\n", wav->filename);
 		return FAIL;
 	}
 
 	if (strncmp(buff, "data", 4)) {
-		fprintf(stderr, "data string missing from WAV data chunk %s", wav->filename);
+		fprintf(stderr, "data string missing from WAV data chunk %s\n", wav->filename);
 		return FAIL;
 	}
 
@@ -257,7 +257,7 @@ static int wav_open_file(struct wav_t *wav)
 		fprintf(stderr, "opening wav %s\n", wav->filename);
 
 	if (NULL == (wav->fp = fopen(wav->filename, "r"))) {
-		fprintf(stderr, "failed to open %s: %s", wav->filename, strerror(errno));
+		fprintf(stderr, "failed to open %s: %s\n", wav->filename, strerror(errno));
 		return FAIL;
 	}
 
@@ -279,7 +279,7 @@ wav_t wav_open(const char *filename, int test)
 struct wav_t *wav;
 
 	if (NULL == (wav = malloc(sizeof(struct wav_t)))) {
-		fprintf(stderr, "malloc wav failed: %s", strerror(errno));
+		fprintf(stderr, "malloc wav failed: %s\n", strerror(errno));
 		return NULL;
 	}
 

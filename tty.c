@@ -49,7 +49,7 @@ struct termios termios;
 		fprintf(stderr, "asserting stty settings ..\n");
 
 	if (tcgetattr(fd, &termios)) {
-		fprintf(stderr, "tcgetattr failed %s: %s", ttyname, strerror(errno));
+		fprintf(stderr, "tcgetattr failed %s: %s\n", ttyname, strerror(errno));
 		return FAIL;
 	}
 
@@ -62,12 +62,12 @@ struct termios termios;
 	termios.c_cflag |= (CS8 | CSTOPB);
 
 	if (cfsetospeed(&termios, B9600)) {
-		fprintf(stderr, "cfsetospeed failed %s: %s", ttyname, strerror(errno));
+		fprintf(stderr, "cfsetospeed failed %s: %s\n", ttyname, strerror(errno));
 		return FAIL;
 	}
 
 	if (tcsetattr(fd, TCSAFLUSH, &termios)) {
-		fprintf(stderr, "tcsetattr failed %s: %s", ttyname, strerror(errno));
+		fprintf(stderr, "tcsetattr failed %s: %s\n", ttyname, strerror(errno));
 		return FAIL;
 	}
 
@@ -84,7 +84,7 @@ struct tty_t *tty;
 int fd;
 
 	if (0 > (fd = open(ttyname, O_RDWR|O_NONBLOCK))) {
-		fprintf(stderr, "failed to open %s: %s", ttyname, strerror(errno));
+		fprintf(stderr, "failed to open %s: %s\n", ttyname, strerror(errno));
 		return NULL;
 	}
 
@@ -96,7 +96,7 @@ int fd;
 			return NULL;
 
 	if (NULL == (tty = malloc(sizeof(struct tty_t)))) {
-		fprintf(stderr, "malloc tty failed: %s", strerror(errno));
+		fprintf(stderr, "malloc tty failed: %s\n", strerror(errno));
 		return NULL;
 	}
 
@@ -122,7 +122,7 @@ int i;
 	if (tty->delay) {
 		for (i = 0; i < len; i++) {
 			if (1 != write(tty->fd, buff+i, 1)) {
-				fprintf(stderr, "write failed %s: %s", tty->filename, strerror(errno));
+				fprintf(stderr, "write failed %s: %s\n", tty->filename, strerror(errno));
 				return FAIL;
 			}
 			if (verbose)
@@ -130,9 +130,18 @@ int i;
 			usleep(tty->delay);
 		}
 	} else {
+		again:
 		if (len != write(tty->fd, buff, len)) {
-			fprintf(stderr, "write failed %s: %s", tty->filename, strerror(errno));
-			return FAIL;
+			switch (errno) {
+			case EAGAIN:
+				if (verbose)
+					fprintf(stderr, "write %s: %s\n", tty->filename, strerror(errno));
+				usleep(100);
+				goto again;
+			default:
+				fprintf(stderr, "write failed %s: %s\n", tty->filename, strerror(errno));
+				return FAIL;
+			}
 		}
 	
 		if (verbose)
