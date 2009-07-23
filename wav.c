@@ -194,7 +194,7 @@ char buff[16];
 	if (NULL != wav->chunk)
 		free(wav->chunk);
 
-	if (NULL == (wav->chunk = malloc(sizeof(struct wav_t)))) {
+	if (NULL == (wav->chunk = malloc(wav->chunk_len+1))) {
 		fprintf(stderr, "malloc wav failed: %s", strerror(errno));
 		return FAIL;
 	}
@@ -287,6 +287,7 @@ struct wav_t *wav;
 	wav->test = test;
 	wav->chunk = NULL;
 	wav->chunk_len = 0;
+	wav->chunk_pos = 0;
 
 	if (test) 
 		return OK;
