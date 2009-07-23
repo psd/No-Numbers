@@ -9,7 +9,7 @@ typedef void *tty_t;
 /*
  *  open a tty, assert settings
  */
-extern tty_t tty_open(const char *tty, int stty, useconds_t delay);
+extern tty_t tty_open(const char *tty, int stty, useconds_t delay, useconds_t retry);
 
 /*
  *  write to a tty

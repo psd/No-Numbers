@@ -42,6 +42,7 @@ static const char *filename = "in.wav";
 
 static useconds_t interval = 1000000LL;
 static useconds_t delay = 0LL;
+static useconds_t retry = 10000LL;
 static long long max_samples = 0LL;
 static long long max_loops = 0LL;
 
@@ -69,6 +70,7 @@ static void usage(const char *command)
 	fprintf(stderr, "   -c countdown    countdown start value - 0 for no countdown\n");
 	fprintf(stderr, "   -i useconds     interval between outputting a sample in useconds\n");
 	fprintf(stderr, "   -d useconds     interval between outputting each character in useconds\n");
+	fprintf(stderr, "   -p useconds     interval between retrying a write following resource unavailable in useconds\n");
 	fprintf(stderr, "   -m maximum      maximum number of samples to output\n");
 	fprintf(stderr, "   -x maximum      stop after maxiumum loops - 0 loop forever\n");
 	return;
@@ -83,7 +85,7 @@ static int getoptions(int argc, char *argv[])
 int c;
 extern char *optarg;
 
-	while ((c = getopt(argc, argv, "tsnh?l:r:f:c:i:d:m:x:")) != -1) {
+	while ((c = getopt(argc, argv, "tsnh?l:r:f:c:i:d:p:m:x:")) != -1) {
 		switch(c) {
 		case 't':
 			test = 1;
@@ -111,6 +113,9 @@ extern char *optarg;
 			break;
 		case 'd':
 			delay = strtoll(optarg, NULL, 10);
+			break;
+		case 'p':
+			retry = strtoll(optarg, NULL, 10);
 			break;
 		case 'm':
 			max_samples = strtoll(optarg, NULL, 10);
@@ -145,10 +150,10 @@ int counter = countdown;
 long long times = 0;
 long long loops = 0;
 
-	if (NULL == (tty_left = tty_open(left_tty, stty, delay)))
+	if (NULL == (tty_left = tty_open(left_tty, stty, delay, retry)))
 		return FAIL;
 
-	if (NULL == (tty_right = tty_open(right_tty, stty, delay)))
+	if (NULL == (tty_right = tty_open(right_tty, stty, delay, retry)))
 		return FAIL;
 
 	for (;;) {

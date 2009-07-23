@@ -36,6 +36,7 @@ struct tty_t
 	char *filename;
 	int fd;
 	useconds_t delay;
+	useconds_t retry;
 };
 
 /*
@@ -78,7 +79,7 @@ struct termios termios;
 /*
  *  open a tty, assert settings
  */
-tty_t tty_open(const char *ttyname, int stty, useconds_t delay)
+tty_t tty_open(const char *ttyname, int stty, useconds_t delay, useconds_t retry)
 {
 struct tty_t *tty;
 int fd;
@@ -103,6 +104,7 @@ int fd;
 	tty->fd = fd;
 	tty->filename = strdup(ttyname);
 	tty->delay = delay;
+	tty->retry = retry;
 
 	return tty;
 }
@@ -115,6 +117,7 @@ int tty_write(tty_t p, const char *buff, int len)
 {
 struct tty_t *tty = p;
 int i;
+int n;
 
 	if (verbose)
 		fprintf(stderr, "%s: ", tty->filename);
@@ -131,12 +134,17 @@ int i;
 		}
 	} else {
 		again:
-		if (len != write(tty->fd, buff, len)) {
+		if (len != (n = write(tty->fd, buff, len))) {
+			fprintf(stderr, "write %d\n", n);
 			switch (errno) {
+			case 0:
+				if (verbose)
+					fprintf(stderr, "write %s: %s\n", tty->filename, strerror(errno));
+				break;
 			case EAGAIN:
 				if (verbose)
 					fprintf(stderr, "write %s: %s\n", tty->filename, strerror(errno));
-				usleep(100);
+				usleep(tty->retry);
 				goto again;
 			default:
 				fprintf(stderr, "write failed %s: %s\n", tty->filename, strerror(errno));
