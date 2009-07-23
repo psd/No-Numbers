@@ -66,7 +66,7 @@ static void usage(const char *command)
 	fprintf(stderr, "   -f filename     wav file to decode - %s\n", filename);
 	fprintf(stderr, "   -l left_tty     pathname for left-channel output - %s\n", left_tty);
 	fprintf(stderr, "   -r right_tty    pathname for right-channel output - %s\n", right_tty);
-	fprintf(stderr, "   -c countdown    countdown start value - 10 for maximum,  0 for no countdown\n");
+	fprintf(stderr, "   -c countdown    countdown start value - 0 for no countdown\n");
 	fprintf(stderr, "   -i useconds     interval between outputting a sample in useconds\n");
 	fprintf(stderr, "   -d useconds     interval between outputting each character in useconds\n");
 	fprintf(stderr, "   -m maximum      maximum number of samples to output\n");
@@ -105,8 +105,6 @@ extern char *optarg;
 			break;
 		case 'c':
 			countdown = (int)strtol(optarg, NULL, 10);
-			if (countdown > 10) 
-				countdown = 10;
 			break;
 		case 'i':
 			interval = strtoll(optarg, NULL, 10);
@@ -157,8 +155,8 @@ long long loops = 0;
 
 		if (counter) {
 			counter--;
-			memset(buff_left, '0'+counter, 8);
-			memset(buff_right, '0'+counter, 8);
+			memset(buff_left, '0'+(counter%10), 8);
+			memset(buff_right, '0'+(counter%10), 8);
 		}
 		else {
 			if (NULL == wav)

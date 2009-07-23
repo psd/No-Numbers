@@ -55,16 +55,18 @@ static unsigned long wav_decode_ulong(const char *name, void *buff, int offset, 
 {
 unsigned char *p = buff;
 unsigned long n = 0L;
+int i = len;
 
 	p += offset;
-	while (len > 0) {
+	while (i > 0) {
 		n <<= 8;
-		len--;
-		n += p[len];
+		i--;
+		n += (unsigned long)p[i];
 	}
 
 	if (verbose)
-		fprintf(stderr, "%s: %*.*lx (%lu)\n", name, len, len, n, n);
+		fprintf(stderr, "%s: %0*lx (%lu)\n", name, len*2, n, n);
+
 	return n;
 }
 
@@ -242,8 +244,8 @@ unsigned long sample_right;
 		fprintf(stderr, "end of chunk\n");
 	}
 
-	sprintf(buff_left, "%8.8ld\n", sample_left);
-	sprintf(buff_right, "%8.8ld\n", sample_right);
+	sprintf(buff_left, "%8.8lu\n", sample_left);
+	sprintf(buff_right, "%8.8lu\n", sample_right);
 	return OK;
 }
 
