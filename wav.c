@@ -55,13 +55,15 @@ static unsigned long wav_decode_ulong(const char *name, void *buff, int offset, 
 {
 unsigned char *p = buff;
 unsigned long n = 0L;
+unsigned long b = 0L;
 int i = len;
 
 	p += offset;
 	while (i > 0) {
 		n <<= 8;
 		i--;
-		n += (unsigned long)p[i];
+		b = p[i];
+		n += b;
 	}
 
 	if (verbose)
@@ -216,7 +218,7 @@ char buff[16];
  *  cycle through samples
  *  - returns DONE when at end of file
  */
-int wav_next(wav_t p, char *buff_left, char *buff_right, size_t len)
+int wav_next(wav_t p, char *buff_left, char *buff_right, size_t len, size_t jump)
 {
 int status;
 struct wav_t *wav = p;
@@ -237,7 +239,12 @@ unsigned long sample_right;
 
 	sample_left = wav_decode_ulong("sample left", wav->chunk, wav->chunk_pos, 2);
 	sample_right = wav_decode_ulong("sample right", wav->chunk, wav->chunk_pos + 2, 2);
-	wav->chunk_pos += 4;
+	wav->chunk_pos += wav->bytes_per_sample;
+
+	/* 
+	 *  optionally jump a few samples 
+	 */
+	wav->chunk_pos += (wav->bytes_per_sample * jump);
 
 	if (wav->chunk_pos > wav->chunk_len) {
 		wav->chunk_pos = 0L;

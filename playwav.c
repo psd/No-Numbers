@@ -45,6 +45,7 @@ static useconds_t delay = 0LL;
 static useconds_t retry = 10000LL;
 static long long max_samples = 0LL;
 static long long max_loops = 0LL;
+static long jump = 0L;
 
 static int countdown = 10;
 static int test = 0;
@@ -71,6 +72,7 @@ static void usage(const char *command)
 	fprintf(stderr, "   -i useconds     interval between outputting a sample in useconds\n");
 	fprintf(stderr, "   -d useconds     interval between outputting each character in useconds\n");
 	fprintf(stderr, "   -p useconds     interval between retrying a write following resource unavailable in useconds\n");
+	fprintf(stderr, "   -j bytes        number of samples to jump - 0 play every sample\n");
 	fprintf(stderr, "   -m maximum      maximum number of samples to output\n");
 	fprintf(stderr, "   -x maximum      stop after maxiumum loops - 0 loop forever\n");
 	return;
@@ -85,7 +87,7 @@ static int getoptions(int argc, char *argv[])
 int c;
 extern char *optarg;
 
-	while ((c = getopt(argc, argv, "tsnh?l:r:f:c:i:d:p:m:x:")) != -1) {
+	while ((c = getopt(argc, argv, "tsnh?l:r:f:c:i:d:p:j:m:x:")) != -1) {
 		switch(c) {
 		case 't':
 			test = 1;
@@ -116,6 +118,9 @@ extern char *optarg;
 			break;
 		case 'p':
 			retry = strtoll(optarg, NULL, 10);
+			break;
+		case 'j':
+			jump = strtol(optarg, NULL, 10);
 			break;
 		case 'm':
 			max_samples = strtoll(optarg, NULL, 10);
@@ -168,7 +173,7 @@ long long loops = 0;
 				if (NULL == (wav = wav_open(filename, test)))
 					return FAIL;
 
-			switch (wav_next(wav, buff_left, buff_right, 8)) {
+			switch (wav_next(wav, buff_left, buff_right, 8, jump)) {
 			case OK:
 				break;
 			case DONE:
